@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Part Data Extractor Pro</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --primary-dark: #5568d3;
+            --primary-light: #e8eaff;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --dark: #1f2937;
+            --light: #f9fafb;
+            --border: #e5e7eb;
+            --shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.15);
+            /* Themeable tokens */
+            --bg-body: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            --card-bg: #ffffff;
+            --card-border: rgba(255, 255, 255, 0.5);
+            --subtitle-color: #666666;
+            --muted: #999999;
+            --input-bg: #ffffff;
+            --table-bg: #ffffff;
+        }
+
+        [data-theme="dark"] {
+            --dark: #e2e8f0;
+            --light: #2d3748;
+            --border: #374151;
+            --primary-light: rgba(102, 126, 234, 0.18);
+            --shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
+            --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.55);
+            --bg-body: linear-gradient(135deg, #0f1117 0%, #1a1f2e 100%);
+            --card-bg: #1e2433;
+            --card-border: rgba(255, 255, 255, 0.07);
+            --subtitle-color: #94a3b8;
+            --muted: #64748b;
+            --input-bg: #2d3748;
+            --table-bg: #1e2433;
+        }
+
+        /* Theme toggle button */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: var(--card-bg);
+            border: 2px solid var(--border);
+            border-radius: 50px;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        .theme-toggle:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .theme-toggle-icon {
+            font-size: 18px;
+            transition: transform 0.4s ease;
+        }
+
+        .theme-toggle:hover .theme-toggle-icon {
+            transform: rotate(20deg);
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-body);
+            min-height: 100vh;
+            padding: 20px;
+            color: var(--dark);
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+
+        .page-wrapper {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 40px 20px;
+        }
+
+        .logo {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
+        h1 {
+            font-size: 42px;
+            font-weight: 800;
+            background: var(--primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: var(--subtitle-color);
+            font-size: 16px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+
+        .main-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .main-container .card {
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .main-container .card.results-section {
+            max-width: 900px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--card-border);
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            box-shadow: var(--shadow-lg);
+            transform: translateY(-2px);
+        }
+
+        .card-title {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--dark);
+        }
+
+        .card-title-icon {
+            font-size: 28px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group:last-child {
+            margin-bottom: 0;
+        }
+
+        label {
+            display: block;
+            color: var(--dark);
+            font-weight: 600;
+            margin-bottom: 10px;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        select {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            font-size: 15px;
+            font-family: inherit;
+            cursor: pointer;
+            appearance: none;
+            background-color: var(--input-bg);
+            color: var(--dark);
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23667eea' stroke-width='2'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 20px;
+            padding-right: 40px;
+            transition: all 0.3s ease;
+        }
+
+        select:hover {
+            border-color: var(--primary-dark);
+            background-color: var(--primary-light);
+        }
+
+        select:focus {
+            outline: none;
+            border-color: var(--primary-dark);
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+        }
+
+        .file-input-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+            border: 2px dashed var(--primary-dark);
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--primary-light) 0%, rgba(143, 211, 244, 0.1) 100%);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .file-input-label:hover {
+            background: var(--primary-light);
+            border-color: var(--primary-dark);
+            transform: scale(1.01);
+        }
+
+        .file-input-label.dragover {
+            background: var(--primary);
+            color: white;
+            border-color: white;
+            transform: scale(1.02);
+        }
+
+        .file-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+            transition: transform 0.3s ease;
+        }
+
+        .file-input-label:hover .file-icon {
+            transform: scale(1.1);
+        }
+
+        .file-text p {
+            color: var(--primary-dark);
+            font-weight: 700;
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+
+        .file-text small {
+            color: var(--muted);
+            display: block;
+            font-size: 13px;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .file-name {
+            margin-top: 10px;
+            font-size: 13px;
+            color: var(--success);
+            padding: 8px 12px;
+            background: rgba(16, 185, 129, 0.1);
+            border-radius: 8px;
+            border-left: 3px solid var(--success);
+            font-weight: 600;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 30px;
+        }
+
+        button {
+            flex: 1;
+            padding: 14px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-submit {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.6);
+        }
+
+        .btn-submit:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-reset {
+            background: var(--light);
+            color: var(--primary-dark);
+            border: 2px solid var(--primary-dark);
+        }
+
+        .btn-reset:hover {
+            background: var(--primary-light);
+            transform: translateY(-2px);
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 30px 0;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 50px;
+            height: 50px;
+            border: 4px solid var(--primary-light);
+            border-top: 4px solid var(--primary-dark);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            background: var(--primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 700;
+            margin-top: 15px;
+            font-size: 16px;
+        }
+
+        .alert {
+            padding: 16px 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+            animation: slideIn 0.3s ease;
+            border-left: 4px solid;
+            font-weight: 600;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-15px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .alert-success {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+            border-left-color: var(--success);
+        }
+
+        .alert-error {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+            border-left-color: var(--danger);
+        }
+
+        .results-section {
+            display: none;
+        }
+
+        .results-table-wrapper {
+            overflow-x: auto;
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--table-bg);
+            color: var(--dark);
+        }
+
+        .data-table thead {
+            background: var(--primary);
+            color: white;
+        }
+
+        .data-table th {
+            padding: 15px 20px;
+            text-align: left;
+            font-weight: 700;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border: none;
+        }
+
+        .data-table td {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            font-size: 14px;
+        }
+
+        .data-table tbody tr:hover {
+            background: var(--primary-light);
+        }
+
+        .data-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .results-header h2 {
+            font-size: 24px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .download-btn {
+            display: inline-block;
+            padding: 12px 28px;
+            background: var(--primary);
+            color: white;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: 700;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            font-size: 14px;
+            letter-spacing: 0.5px;
+            box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.6);
+        }
+
+        .info-banner {
+            background: var(--primary);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .info-banner strong {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 800;
+            background: var(--primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+
+        @media (max-width: 900px) {
+            .main-container .card {
+                max-width: 100%;
+            }
+        }
+
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 32px;
+            }
+
+            .card {
+                padding: 20px;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            button {
+                width: 100%;
+            }
+
+            .results-header {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+        <span class="theme-toggle-icon" id="themeIcon">🌙</span>
+        <span id="themeLabel">Dark</span>
+    </button>
+
+    <div class="page-wrapper">
+        <header>
+            <div class="logo">📊</div>
+            <h1>Part Data Extractor</h1>
+            <p class="subtitle">Transform part images into structured Excel data</p>
+        </header>
+
+        <div class="info-banner">
+            <strong>✨ How it works:</strong>
+            Upload one or more images — AI automatically detects the part type of each and extracts all specifications into a single Excel file.
+        </div>
+
+        <div class="main-container">
+            <!-- Upload Form -->
+            <div class="card">
+                <div class="card-title">
+                    <span class="card-title-icon">📝</span>
+                    Upload & Process
+                </div>
+
+                <div class="alert alert-success" id="successAlert"></div>
+                <div class="alert alert-error" id="errorAlert"></div>
+
+                <form id="extractionForm">
+                    <div class="form-group">
+                        <label>Image File *</label>
+                        <div class="file-input-wrapper">
+                            <label for="imageInput" class="file-input-label" id="fileInputLabel">
+                                <div class="file-icon">🖼️</div>
+                                <div class="file-text">
+                                    <p>Click to upload or drag & drop</p>
+                                    <small>PNG, JPG, JPEG, GIF, BMP — multiple files supported</small>
+                                </div>
+                            </label>
+                            <input type="file" id="imageInput" name="images" accept="image/*" multiple required>
+                        </div>
+                        <div class="file-name" id="fileName" style="display: none;"></div>
+                    </div>
+
+                    <div class="button-group">
+                        <button type="submit" class="btn-submit" id="submitBtn">Process Image</button>
+                        <button type="reset" class="btn-reset" id="resetBtn">Clear</button>
+                    </div>
+
+                    <div class="loading" id="loading">
+                        <div class="spinner"></div>
+                        <p class="loading-text" id="loadingText">Processing images...</p>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Results Preview -->
+            <div class="card results-section" id="resultsSection">
+                <div class="card-title">
+                    <span class="card-title-icon">✅</span>
+                    Extraction Results
+                </div>
+
+                <div class="results-header">
+                    <h2>Data Preview</h2>
+                    <a href="#" class="download-btn" id="downloadBtn">📥 Download Excel</a>
+                </div>
+
+                <div class="results-table-wrapper">
+                    <table class="data-table" id="resultsTable">
+                        <thead>
+                            <tr id="tableHeader"></tr>
+                        </thead>
+                        <tbody id="tableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats" id="statsSection" style="display: none;">
+            <div class="stat-card">
+                <div class="stat-value" id="rowCount">0</div>
+                <div class="stat-label">Rows Extracted</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="colCount">0</div>
+                <div class="stat-label">Fields</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="partTypeLabel">—</div>
+                <div class="stat-label">Part Type</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentOutputFile = null;
+
+        // Drag and drop
+        const fileInputLabel = document.getElementById('fileInputLabel');
+        const imageInput = document.getElementById('imageInput');
+        const fileNameDisplay = document.getElementById('fileName');
+        const form = document.getElementById('extractionForm');
+
+        fileInputLabel.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileInputLabel.classList.add('dragover');
+        });
+
+        fileInputLabel.addEventListener('dragleave', () => {
+            fileInputLabel.classList.remove('dragover');
+        });
+
+        fileInputLabel.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileInputLabel.classList.remove('dragover');
+            imageInput.files = e.dataTransfer.files;
+            updateFileName();
+        });
+
+        imageInput.addEventListener('change', updateFileName);
+
+        function updateFileName() {
+            const count = imageInput.files.length;
+            if (count > 0) {
+                const names = Array.from(imageInput.files).map(f => f.name).join(', ');
+                fileNameDisplay.textContent = `✓ ${count} file${count > 1 ? 's' : ''} selected: ${names}`;
+                fileNameDisplay.style.display = 'block';
+            } else {
+                fileNameDisplay.style.display = 'none';
+            }
+        }
+
+        function showAlert(message, type) {
+            const alertId = type === 'success' ? 'successAlert' : 'errorAlert';
+            const alert = document.getElementById(alertId);
+            alert.textContent = message;
+            alert.style.display = 'block';
+
+            if (type === 'success') {
+                document.getElementById('errorAlert').style.display = 'none';
+            } else {
+                document.getElementById('successAlert').style.display = 'none';
+            }
+
+            if (type === 'success') {
+                setTimeout(() => {
+                    alert.style.display = 'none';
+                }, 4000);
+            }
+        }
+
+        function displayResults(result) {
+            const resultsSection = document.getElementById('resultsSection');
+            const tableHeader = document.getElementById('tableHeader');
+            const tableBody = document.getElementById('tableBody');
+            const statsSection = document.getElementById('statsSection');
+
+            tableHeader.innerHTML = '';
+            tableBody.innerHTML = '';
+
+            const data = result.extracted_data || [];
+            const images = result.images || [];
+
+            if (data.length === 0) {
+                showAlert('No data extracted from images', 'error');
+                return;
+            }
+
+            const columns = Object.keys(data[0]);
+
+            columns.forEach(col => {
+                const th = document.createElement('th');
+                th.textContent = col;
+                tableHeader.appendChild(th);
+            });
+
+            data.forEach(row => {
+                const tr = document.createElement('tr');
+                columns.forEach(col => {
+                    const td = document.createElement('td');
+                    td.textContent = (row[col] !== null && row[col] !== undefined) ? row[col] : '—';
+                    tr.appendChild(td);
+                });
+                tableBody.appendChild(tr);
+            });
+
+            // Stats
+            const partTypes = [...new Set(images.map(i => i.part_type))];
+            const partLabel = partTypes.map(t => t.charAt(0).toUpperCase() + t.slice(1)).join(' / ');
+
+            resultsSection.style.display = 'block';
+            statsSection.style.display = 'grid';
+            document.getElementById('rowCount').textContent = data.length;
+            document.getElementById('colCount').textContent = columns.length;
+            document.getElementById('partTypeLabel').textContent = partLabel || '—';
+
+            resultsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const imageFiles = document.getElementById('imageInput').files;
+
+            if (!imageFiles || imageFiles.length === 0) {
+                showAlert('Please select at least one image file', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            for (const file of imageFiles) {
+                formData.append('images', file);
+            }
+
+            document.getElementById('loadingText').textContent =
+                `Processing ${imageFiles.length} image${imageFiles.length > 1 ? 's' : ''}...`;
+
+            const loading = document.getElementById('loading');
+            const submitBtn = document.getElementById('submitBtn');
+            
+            loading.style.display = 'block';
+            submitBtn.disabled = true;
+
+            try {
+                const response = await fetch('/api/process', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.error || 'Processing failed');
+                }
+
+                currentOutputFile = result.output_file;
+                const imgCount = (result.images || []).length;
+                showAlert(`✅ ${imgCount} image${imgCount !== 1 ? 's' : ''} processed successfully!`, 'success');
+                displayResults(result);
+            } catch (error) {
+                showAlert(`Error: ${error.message}`, 'error');
+            } finally {
+                loading.style.display = 'none';
+                submitBtn.disabled = false;
+            }
+        });
+
+        document.getElementById('downloadBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            if (currentOutputFile) {
+                window.location.href = `/api/download/${encodeURIComponent(currentOutputFile)}`;
+            }
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            document.getElementById('resultsSection').style.display = 'none';
+            document.getElementById('statsSection').style.display = 'none';
+            document.getElementById('successAlert').style.display = 'none';
+            document.getElementById('errorAlert').style.display = 'none';
+            fileNameDisplay.style.display = 'none';
+            currentOutputFile = null;
+        });
+
+        // Theme toggle
+        const themeToggle = document.getElementById('themeToggle');
+        const themeIcon = document.getElementById('themeIcon');
+        const themeLabel = document.getElementById('themeLabel');
+
+        function applyTheme(dark) {
+            if (dark) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                themeIcon.textContent = '☀️';
+                themeLabel.textContent = 'Light';
+            } else {
+                document.documentElement.removeAttribute('data-theme');
+                themeIcon.textContent = '🌙';
+                themeLabel.textContent = 'Dark';
+            }
+            localStorage.setItem('theme', dark ? 'dark' : 'light');
+        }
+
+        // Load saved preference
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') applyTheme(true);
+
+        themeToggle.addEventListener('click', () => {
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            applyTheme(!isDark);
+        });
+    </script>
+</body>
+</html>
