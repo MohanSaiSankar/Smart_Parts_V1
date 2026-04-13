@@ -70,7 +70,7 @@ def map_to_excel_fields(vector_json,part_type):
                 
             # Optional: Flat spot dimension
             uBoltFlatSpot = ubolt.get("uBoltFlatSpot")
-            if uBoltFlatSpot is not None and uBoltFlatSpot != 0:
+            if uBoltFlatSpot is not None:
                 mapped_row["IJUAhsUBolt::UBoltFlatSpot"] = int(uBoltFlatSpot)
 
             # Inner curved diameter and start position
@@ -380,5 +380,8 @@ def map_to_excel_fields(vector_json,part_type):
                 mapped_row["IJUAhsHeight2::Height2"] = float(height2)
 
             mapped_data.append(mapped_row)
+
+    else:
+        raise ValueError(f"Unknown part type: {part_type!r}")
 
     return mapped_data

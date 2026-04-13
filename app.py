@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, jsonify, send_file
 import os
+import uuid
 from werkzeug.utils import secure_filename
 from extractor import extract_data
 from mapper import map_to_excel_fields
@@ -60,7 +61,7 @@ def process_image():
             return jsonify({'error': 'No valid images to process'}), 400
 
         template_path = "templates/Input_Parts.xlsx"
-        output_filename = "Output_SmartParts.xlsx"
+        output_filename = f"Output_SmartParts_{uuid.uuid4().hex[:8]}.xlsx"
         output_path = os.path.join(app.config['UPLOAD_FOLDER'], output_filename)
 
         print("Writing Excel...")
@@ -90,7 +91,10 @@ def process_image():
 @app.route('/api/download/<filename>')
 def download_file(filename):
     try:
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(filename))
+        upload_dir = os.path.realpath(app.config['UPLOAD_FOLDER'])
+        filepath = os.path.realpath(os.path.join(upload_dir, secure_filename(filename)))
+        if not filepath.startswith(upload_dir + os.sep) and filepath != upload_dir:
+            return jsonify({'error': 'Invalid file path'}), 400
         if not os.path.exists(filepath):
             return jsonify({'error': 'File not found'}), 404
         return send_file(filepath, as_attachment=True)

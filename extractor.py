@@ -2,6 +2,7 @@
 import json
 import os
 import re
+import time
 from openai import AzureOpenAI
 from dotenv import load_dotenv
 
@@ -15,14 +16,53 @@ client = AzureOpenAI(
 AZURE_DEPLOYMENT = os.getenv("AZURE_OPENAI_DEPLOYMENT", "gpt-4o")
 KNOWLEDGE_IMG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Knowledge_Pdf", "images")
 
-def _encode_image(path):
-    with open(path, "rb") as f:
-        return base64.b64encode(f.read()).decode()
+_MIME_MAP = {
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png": "image/png",
+    ".gif": "image/gif",
+    ".bmp": "image/bmp",
+    ".webp": "image/webp",
+}
 
-def _img_block(path, mime="image/png"):
+# Module-level cache: path -> base64 string (knowledge reference images never change)
+_IMAGE_CACHE: dict = {}
+
+
+def _encode_image(path):
+    if path not in _IMAGE_CACHE:
+        with open(path, "rb") as f:
+            _IMAGE_CACHE[path] = base64.b64encode(f.read()).decode()
+    return _IMAGE_CACHE[path]
+
+
+def _mime_for(path):
+    """Return the correct MIME type based on the file extension."""
+    ext = os.path.splitext(path)[1].lower()
+    return _MIME_MAP.get(ext, "image/png")
+
+
+def _img_block(path, mime=None):
     """Return an image_url content block for a given file path."""
+    if mime is None:
+        mime = _mime_for(path)
     b64 = _encode_image(path)
     return {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{b64}"}}
+
+
+def _call_with_retry(fn, retries=3, backoff=2):
+    """Call fn() up to `retries` times, sleeping `backoff` seconds between attempts."""
+    last_exc = None
+    for attempt in range(1, retries + 1):
+        try:
+            return fn()
+        except Exception as exc:
+            last_exc = exc
+            if attempt < retries:
+                print(f"Azure API error (attempt {attempt}/{retries}): {exc} — retrying in {backoff}s")
+                time.sleep(backoff)
+    raise last_exc
+
 
 def _knowledge_blocks(filenames):
     """Return list of (label text block, image block) pairs for knowledge images that exist."""
@@ -45,35 +85,39 @@ def detect_part_type(image_path):
     """
     with open(image_path, "rb") as f:
         input_b64 = base64.b64encode(f.read()).decode()
+    input_mime = _mime_for(image_path)
 
-    response = client.chat.completions.create(
-        model=AZURE_DEPLOYMENT,
-        messages=[{
-            "role": "user",
-            "content": [
-                {
-                    "type": "text",
-                    "text": (
-                        "You are a Hexagon SmartParts specialist.\n\n"
-                        "Look at the engineering drawing or data table in the image and decide "
-                        "which of the four SmartPart categories it belongs to:\n\n"
-                        "- plate     : flat rectangular steel plates with Width, Length, Thickness dimensions\n"
-                        "- ubolt     : U-shaped or J-shaped threaded rod hardware (U-bolt / J-bolt)\n"
-                        "- clamp     : circular pipe clamp hardware with bolt holes and sweep geometry\n"
-                        "- lug       : straight pipe welding lug mounted on a straight pipe (parallel/perpendicular)\n"
-                        "- elbow_lug : elbow lug mounted on a pipe elbow fitting with ElbowRadius and FaceToCenter\n\n"
-                        "Reply with EXACTLY one word — no punctuation, no explanation:\n"
-                        "plate   OR   ubolt   OR   clamp   OR   lug   OR   elbow_lug"
-                    )
-                },
-                {
-                    "type": "image_url",
-                    "image_url": {"url": f"data:image/png;base64,{input_b64}"}
-                }
-            ]
-        }],
-        max_tokens=10,
-    )
+    def _call():
+        return client.chat.completions.create(
+            model=AZURE_DEPLOYMENT,
+            messages=[{
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": (
+                            "You are a Hexagon SmartParts specialist.\n\n"
+                            "Look at the engineering drawing or data table in the image and decide "
+                            "which of the four SmartPart categories it belongs to:\n\n"
+                            "- plate     : flat rectangular steel plates with Width, Length, Thickness dimensions\n"
+                            "- ubolt     : U-shaped or J-shaped threaded rod hardware (U-bolt / J-bolt)\n"
+                            "- clamp     : circular pipe clamp hardware with bolt holes and sweep geometry\n"
+                            "- lug       : straight pipe welding lug mounted on a straight pipe (parallel/perpendicular)\n"
+                            "- elbow_lug : elbow lug mounted on a pipe elbow fitting with ElbowRadius and FaceToCenter\n\n"
+                            "Reply with EXACTLY one word — no punctuation, no explanation:\n"
+                            "plate   OR   ubolt   OR   clamp   OR   lug   OR   elbow_lug"
+                        )
+                    },
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:{input_mime};base64,{input_b64}"}
+                    }
+                ]
+            }],
+            max_tokens=10,
+        )
+
+    response = _call_with_retry(_call)
     raw = response.choices[0].message.content.strip().lower()
     for valid in ("plate", "ubolt", "clamp", "elbow_lug", "lug"):
         if valid in raw:
@@ -89,7 +133,8 @@ def extract_data(image_path, part_type=None):
 
     with open(image_path, "rb") as f:
         input_b64 = base64.b64encode(f.read()).decode()
-    input_block = {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{input_b64}"}}
+    input_mime = _mime_for(image_path)
+    input_block = {"type": "image_url", "image_url": {"url": f"data:{input_mime};base64,{input_b64}"}}
 
     if part_type.lower() == "plate":
         knowledge_imgs = [
@@ -131,13 +176,6 @@ def extract_data(image_path, part_type=None):
                 )
             }
         ]
-
-        response = client.chat.completions.create(
-            model=AZURE_DEPLOYMENT,
-            messages=[{"role": "user", "content": content}],
-            max_tokens=4096,
-            temperature=0,
-        )
 
     elif part_type.lower() == "ubolt":
         knowledge_imgs = [
@@ -183,13 +221,6 @@ def extract_data(image_path, part_type=None):
                 )
             }
         ]
-
-        response = client.chat.completions.create(
-            model=AZURE_DEPLOYMENT,
-            messages=[{"role": "user", "content": content}],
-            max_tokens=4096,
-            temperature=0,
-        )
 
     elif part_type.lower() == "clamp":
         knowledge_imgs = [
@@ -249,13 +280,6 @@ def extract_data(image_path, part_type=None):
                 )
             }
         ]
-
-        response = client.chat.completions.create(
-            model=AZURE_DEPLOYMENT,
-            messages=[{"role": "user", "content": content}],
-            max_tokens=4096,
-            temperature=0,
-        )
 
     elif part_type.lower() == "elbow_lug":
         knowledge_imgs = [
@@ -333,13 +357,6 @@ def extract_data(image_path, part_type=None):
             }
         ]
 
-        response = client.chat.completions.create(
-            model=AZURE_DEPLOYMENT,
-            messages=[{"role": "user", "content": content}],
-            max_tokens=4096,
-            temperature=0,
-        )
-
     elif part_type.lower() == "lug":
         knowledge_imgs = [
             "lug_p4_img2.png",   # Local coordinate system / port layout (Pin port, Route port)
@@ -415,12 +432,17 @@ def extract_data(image_path, part_type=None):
             }
         ]
 
-        response = client.chat.completions.create(
+    else:
+        raise ValueError(f"Unsupported part type for extraction: {part_type!r}")
+
+    response = _call_with_retry(
+        lambda: client.chat.completions.create(
             model=AZURE_DEPLOYMENT,
             messages=[{"role": "user", "content": content}],
             max_tokens=4096,
             temperature=0,
         )
+    )
 
     # Print raw response for debugging
     raw_output = response.choices[0].message.content
