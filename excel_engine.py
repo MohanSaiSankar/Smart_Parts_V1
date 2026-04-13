@@ -11,6 +11,16 @@ _SHEET_FOR_PART = {
     "clamp":     "Clamp",
     "lug":       "Stright_Pipe_Lug",
     "elbow_lug": "Elbow_Lug",
+    "bolt":      "Bolt",
+    "nut":       "Nut",
+    "pin":       "Pin",
+    "clevis":    "Clevis",
+    "rod":       "Rod",
+    "shoe":      "Shoe",
+    "strap":     "Strap",
+    "shield":    "Shield",
+    "guide":     "Guide",
+    "strut":     "Strut_A",
 }
 
 
@@ -154,8 +164,9 @@ def fill_workbook(template_path, output_path, batches):
         _fill_ws(new_ws, mapped_data)
         new_sheets.append(sheet_name)
 
-    # Remove original template part sheets — keep only CustomInterfaces + new sheets
-    sheets_to_remove = set(_SHEET_FOR_PART.values())
+    # Remove original template part sheets — keep only CustomInterfaces + new sheets.
+    # Exclude any sheet that was just created (e.g. label == template sheet name).
+    sheets_to_remove = set(_SHEET_FOR_PART.values()) - set(new_sheets)
     for shname in list(wb.sheetnames):
         if shname in sheets_to_remove:
             del wb[shname]

@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -B5 \"^ProgID: HSSmartPart\" \"/c/Users/mpoliset/source/repos/Smart_Parts_V1/Knowledge_Pdf/\"*.md)"
+    ]
+  }
+}
