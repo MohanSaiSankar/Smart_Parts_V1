@@ -85,7 +85,7 @@ def process_image():
         if not batches:
             return jsonify({'error': 'No valid images to process'}), 400
 
-        template_path = "templates/Input_Parts.xlsx"
+        template_path = "templates/HS_S3DParts.xlsx"
         output_filename = f"Output_SmartParts_{uuid.uuid4().hex[:8]}.xlsx"
         output_path = os.path.join(app.config['UPLOAD_FOLDER'], output_filename)
 
