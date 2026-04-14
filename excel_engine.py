@@ -6,21 +6,21 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 _SHEET_FOR_PART = {
-    "plate":     "Plates",
-    "ubolt":     "Ubolt",
-    "clamp":     "Clamp",
-    "lug":       "Stright_Pipe_Lug",
-    "elbow_lug": "Elbow_Lug",
-    "bolt":      "Bolt",
-    "nut":       "Nut",
-    "pin":       "Pin",
-    "clevis":    "Clevis",
-    "rod":       "Rod",
-    "shoe":      "Shoe",
-    "strap":     "Strap",
-    "shield":    "Shield",
-    "guide":     "Guide",
-    "strut":     "Strut_A",
+    "plate":     "S3DhsShape_Plate",
+    "ubolt":     "S3Dhs_Ubolt",
+    "clamp":     "S3Dhs_MediumPipeClamp",
+    "lug":       "S3Dhs_PipeLug",
+    "elbow_lug": "S3Dhs_ElbowLug",
+    "bolt":      "S3Dhs_HexBolt",
+    "nut":       "S3Dhs_HexNut",
+    "pin":       "S3Dhs_Pin",
+    "clevis":    "S3Dhs_Clevis",
+    "rod":       "S3Dhs_RodCT",
+    "shoe":      "S3Dhs_Shoe",
+    "strap":     "S3Dhs_PipeStrapBolted",
+    "shield":    "S3Dhs_Shield",
+    "guide":     "S3Dhs_Guide",
+    "strut":     "S3Dhs_AdjRigidStrutA",
 }
 
 
