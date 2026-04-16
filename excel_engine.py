@@ -50,13 +50,20 @@ def _read_headers(ws, header_row):
 
 def _find_template_row(ws, start_row, end_row):
     """
-    Locate the template row between Start and End.
+    Locate the blank template row to use as the style/default source.
 
     Strategy (in order):
-    1. Any row whose column-1 value is '!' (explicit template marker).
-    2. The last non-empty row before End (fallback for existing templates).
+    1. Row immediately before Start whose column-1 value is '!'
+       (HS_S3DParts format: blank '!' row sits just above 'Start').
+    2. Any row between Start and End whose column-1 value is '!'
+       (legacy Input_Parts format: blank '!' row sits just after 'Start').
+    3. The last non-empty row before End (last-resort fallback).
     """
-    # Pass 1: explicit '!' marker
+    # Pass 0: blank '!' row just before Start (HS_S3DParts sheet format)
+    if start_row > 1 and ws.cell(start_row - 1, 1).value == "!":
+        return start_row - 1
+
+    # Pass 1: explicit '!' marker between Start and End
     for r in range(start_row + 1, end_row):
         if ws.cell(r, 1).value == "!":
             return r
