@@ -6,21 +6,11 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 _SHEET_FOR_PART = {
-    "plate":     "S3DhsShape_Plate",
-    "ubolt":     "S3Dhs_Ubolt",
-    "clamp":     "S3Dhs_MediumPipeClamp",
-    "lug":       "S3Dhs_PipeLug",
-    "elbow_lug": "S3Dhs_ElbowLug",
-    "bolt":      "S3Dhs_HexBolt",
-    "nut":       "S3Dhs_HexNut",
-    "pin":       "S3Dhs_Pin",
-    "clevis":    "S3Dhs_Clevis",
-    "rod":       "S3Dhs_RodCT",
-    "shoe":      "S3Dhs_Shoe",
-    "strap":     "S3Dhs_PipeStrapBolted",
-    "shield":    "S3Dhs_Shield",
-    "guide":     "S3Dhs_Guide",
-    "strut":     "S3Dhs_AdjRigidStrutA",
+    "plate":     "Plates",
+    "ubolt":     "Ubolt",
+    "clamp":     "Clamp",
+    "lug":       "Stright_Pipe_Lug",
+    "elbow_lug": "Elbow_Lug",
 }
 
 
@@ -50,20 +40,13 @@ def _read_headers(ws, header_row):
 
 def _find_template_row(ws, start_row, end_row):
     """
-    Locate the blank template row to use as the style/default source.
+    Locate the template row between Start and End.
 
     Strategy (in order):
-    1. Row immediately before Start whose column-1 value is '!'
-       (HS_S3DParts format: blank '!' row sits just above 'Start').
-    2. Any row between Start and End whose column-1 value is '!'
-       (legacy Input_Parts format: blank '!' row sits just after 'Start').
-    3. The last non-empty row before End (last-resort fallback).
+    1. Any row whose column-1 value is '!' (explicit template marker).
+    2. The last non-empty row before End (fallback for existing templates).
     """
-    # Pass 0: blank '!' row just before Start (HS_S3DParts sheet format)
-    if start_row > 1 and ws.cell(start_row - 1, 1).value == "!":
-        return start_row - 1
-
-    # Pass 1: explicit '!' marker between Start and End
+    # Pass 1: explicit '!' marker
     for r in range(start_row + 1, end_row):
         if ws.cell(r, 1).value == "!":
             return r
@@ -171,9 +154,8 @@ def fill_workbook(template_path, output_path, batches):
         _fill_ws(new_ws, mapped_data)
         new_sheets.append(sheet_name)
 
-    # Remove original template part sheets — keep only CustomInterfaces + new sheets.
-    # Exclude any sheet that was just created (e.g. label == template sheet name).
-    sheets_to_remove = set(_SHEET_FOR_PART.values()) - set(new_sheets)
+    # Remove original template part sheets — keep only CustomInterfaces + new sheets
+    sheets_to_remove = set(_SHEET_FOR_PART.values())
     for shname in list(wb.sheetnames):
         if shname in sheets_to_remove:
             del wb[shname]

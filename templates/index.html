@@ -729,10 +729,7 @@
                 return;
             }
 
-            // Union keys from all rows so mixed-type batches display all columns
-            const columnSet = new Set();
-            data.forEach(row => Object.keys(row).forEach(k => columnSet.add(k)));
-            const columns = Array.from(columnSet);
+            const columns = Object.keys(data[0]);
 
             columns.forEach(col => {
                 const th = document.createElement('th');
@@ -778,21 +775,14 @@
                 formData.append('images', file);
             }
 
+            document.getElementById('loadingText').textContent =
+                `Processing ${imageFiles.length} image${imageFiles.length > 1 ? 's' : ''}...`;
+
             const loading = document.getElementById('loading');
             const submitBtn = document.getElementById('submitBtn');
-            const loadingText = document.getElementById('loadingText');
-
+            
             loading.style.display = 'block';
             submitBtn.disabled = true;
-
-            // Cycle through image names so the user can see which image is being processed
-            const fileNames = Array.from(imageFiles).map(f => f.name);
-            let imgIdx = 0;
-            loadingText.textContent = `Processing image 1 of ${fileNames.length}: ${fileNames[0]}`;
-            const progressInterval = setInterval(() => {
-                imgIdx = (imgIdx + 1) % fileNames.length;
-                loadingText.textContent = `Processing image ${imgIdx + 1} of ${fileNames.length}: ${fileNames[imgIdx]}`;
-            }, 12000);
 
             try {
                 const response = await fetch('/api/process', {
@@ -813,7 +803,6 @@
             } catch (error) {
                 showAlert(`Error: ${error.message}`, 'error');
             } finally {
-                clearInterval(progressInterval);
                 loading.style.display = 'none';
                 submitBtn.disabled = false;
             }
